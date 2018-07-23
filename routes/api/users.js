@@ -2,6 +2,9 @@ const express = require("express")
 const router = express.Router()
 const gravatar = require("gravatar")
 const bcrypt = require("bcryptjs")
+const jwt = require("jsonwebtoken")
+const passport = require("passport")
+const keys = require("../../config/keys")
 
 // Load user model
 const User = require("../models/User")
@@ -11,10 +14,9 @@ const User = require("../models/User")
 //@access Public route
 router.get("/test", (req, res) => res.json({ msg: "Users works" }))
 
-//@route  GET api/users/register
+//@route  POST api/users/register
 //@desc   Register a user
 //@access Public route
-
 router.post("/register", (req, res) => {
 	User.findOne({ email: req.body.email }).then(user => {
 		if (user) {
@@ -47,5 +49,54 @@ router.post("/register", (req, res) => {
 		}
 	})
 })
+
+//@route  GET api/users/login
+//@desc   Login a user/ return a JWT token
+//@access Public route
+router.post("/login", (req, res) => {
+	const email = req.body.email
+	const password = req.body.password
+
+	User.findOne({ email }).then(user => {
+		if (!user) {
+			return res.status(404).json({ email: "Credentials are incorrect" })
+		}
+
+		bcrypt.compare(password, user.password).then(isMatch => {
+			if (isMatch) {
+				const payload = {
+					id: user.id,
+					name: user.name,
+					avatar: user.avatar
+				}
+				jwt.sign(
+					payload,
+					keys.secretOrKey,
+					{ expiresIn: 3600 },
+					(error, token) => {
+						res.json({ success: true, token: `Bearer ${token}` })
+					}
+				)
+			} else {
+				return res.status(400).json({ password: "Credentials are incorrect" })
+			}
+		})
+	})
+})
+
+//@route  GET api/users/current
+//@desc   Get the current user
+//@access Private route
+router.get(
+	"/current",
+	passport.authenticate("jwt", { session: false }),
+	(req, res) => {
+		res.json({
+			id: req.user.id,
+			name: req.user.name,
+			email: req.user.email
+		})
+	}
+)
 
 module.exports = router
