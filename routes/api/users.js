@@ -10,7 +10,7 @@ const validateRegisterInput = require("../../validation/register")
 const validateLoginInput = require("../../validation/login")
 
 // Load user model
-const User = require("../models/User")
+const User = require("../../models/User")
 
 //@route  GET api/users/test
 //@desc   Tests users route
